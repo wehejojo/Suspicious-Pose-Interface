@@ -1,18 +1,24 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
-import Home from './pages/Home';
-import LatestViolation from './pages/LatestViolation';
-import Violations from './pages/Violations';
-import Reports from './pages/Reports';
+import NotFound from './pages/NotFound';
+
+import Login from './pages/auth/Login';
+import Home from './pages/home/Home';
+import Dashboard from './pages/dashboard/Dashboard';
+import Charts from './pages/charts/Charts';
+import Feed from './pages/feed/Feed';
 
 function App() {
   return (
     <>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/latest" element={<LatestViolation />} />
-          <Route path="/violations" element={<Violations />} />
+          <Route path="/" element={<Login />} />
+          <Route path="/404" element={<NotFound />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/charts" element={<Charts />} />
+          <Route path="/feed" element={<Feed />} />
         </Routes>
       </BrowserRouter>
     </>
