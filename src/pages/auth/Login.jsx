@@ -1,7 +1,8 @@
+import axios from 'axios';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
 
 import styles from './Login.module.css';
 
@@ -20,46 +21,46 @@ export default function Login() {
         navigate(`${redirect_endpoint}`);
       }
     } catch (err) {
-      if (err.response) {
-        alert(`Login Failed: ${err.response.data.error}`);
-      } else {
-        alert(`Error during login: ${err.message}`);
-      }
+      console.error(err);
+      toast.error('Login failed, check password.');
       setPassword('');
     }
   };
 
   return (
-    <div className={styles['login-container']}>
-      <div className={styles['login-box']}>
-        <h2 className={styles['login-title']}>John Erick</h2>
-        <form onSubmit={handleSubmit} className={styles['login-form']}>
-          <label>Password</label>
-          <div className={styles['password-wrapper']}>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              className={styles.input}
-            />
-            {showPassword ? (
-              <FaEye
-                className={styles['eye-icon']}
-                onMouseUp={() => setShowPassword(false)}
-                onMouseLeave={() => setShowPassword(false)}
+    <>
+      <Toaster position="bottom-center" reverseOrder={false} />
+      <div className={styles['login-container']}>
+        <div className={styles['login-box']}>
+          <h2 className={styles['login-title']}>John Erick</h2>
+          <form onSubmit={handleSubmit} className={styles['login-form']}>
+            <label>Password</label>
+            <div className={styles['password-wrapper']}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                className={styles.input}
               />
-            ) : (
-              <FaEyeSlash
-                className={styles['eye-icon']}
-                onMouseDown={() => setShowPassword(true)}
-              />
-            )}
-          </div>
-          <button type="submit" className={styles['login-btn']}>Login</button>
-        </form>
+              {showPassword ? (
+                <FaEye
+                  className={styles['eye-icon']}
+                  onMouseUp={() => setShowPassword(false)}
+                  onMouseLeave={() => setShowPassword(false)}
+                />
+              ) : (
+                <FaEyeSlash
+                  className={styles['eye-icon']}
+                  onMouseDown={() => setShowPassword(true)}
+                />
+              )}
+            </div>
+            <button type="submit" className={styles['login-btn']}>Login</button>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

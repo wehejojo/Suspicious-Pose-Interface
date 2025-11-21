@@ -1,0 +1,150 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #0d47a1;
+  color: #ecf0f1;
+  position: absolute;
+  width: 100vw;
+  top: 0;
+  left: 0;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 5rem;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ecf0f1;
+}
+
+.links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.link {
+  color: #ecf0f1;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  color: #2172cf;
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user {
+  font-weight: 500;
+}
+
+.logoutBtn {
+  background-color: #1565c0;
+  border: none;
+  color: #ecf0f1;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logoutBtn:hover {
+  background-color: #2172cf;
+}
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: #ecf0f1;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.hamburger:hover {
+  color: #2172cf;
+}
+
+.mobileMenu {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,0.6);
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.mobileMenu.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobileMenuContent {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 250px;
+  height: 100%;
+  background-color: #0d47a1;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  z-index: 1001;
+  color: #ecf0f1;
+}
+
+.mobileMenuContent a {
+  color: #ecf0f1;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.mobileMenuContent a:hover {
+  color: #1abc9c;
+}
+
+.mobileMenu.open .mobileMenuContent {
+  transform: translateX(0);
+}
+
+.mobileUser {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .links {
+    display: none;
+  }
+
+  .hamburger {
+    display: block;
+  }
+
+  .rightSection .logoutBtn {
+    display: none;
+  }
+
+  .rightSection .user {
+    margin-right: 0;
+  }
+}

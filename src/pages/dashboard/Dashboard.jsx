@@ -1,29 +1,178 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from "axios";
+import React, { useEffect, useState, useMemo } from "react";
+import { FiRefreshCw } from "react-icons/fi";
 
-import styles from './Dashboard.module.css';
+import NavBar from "../../components/NavBar";
+import EventModal from "../../components/EventModal";
 
-export default function Dashboard() {
-  const [poseData, setPoseData] = useState(null);
+import styles from "./Dashboard.module.css";
+
+const KpiCard = ({ label, value }) => (
+  <div className={styles.card}>
+    <div className={styles.kpiLabel}>{label}</div>
+    <div className={styles.kpiValue}>{value}</div>
+  </div>
+);
+
+// Capitalize first letter
+const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
+export default function DashboardPage() {
+  const [events, setEvents] = useState([]);
+  const [latestEvent, setLatestEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [modalEvent, setModalEvent] = useState(null);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [eventsRes, latestRes] = await Promise.all([
+        axios.get("/api/suspicious_poses"),
+        axios.get("/api/latest"),
+      ]);
+
+      const normalizedEvents = eventsRes.data.map(e => ({
+        ...e,
+        status: capitalize(e.status)
+      }));
+
+      setEvents(normalizedEvents);
+      setLatestEvent({
+        ...latestRes.data,
+        status: capitalize(latestRes.data.status)
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const handleSaveStatus = async (newStatus) => {
+    if (!modalEvent) return;
+
+    const capitalizedStatus = capitalize(newStatus);
+
+    try {
+      await axios.patch(`/api/suspicious_poses/${modalEvent.id}`, {
+        status: capitalizedStatus,
+      });
+
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === modalEvent.id ? { ...e, status: capitalizedStatus } : e
+        )
+      );
+
+      if (
+        latestEvent &&
+        latestEvent.timestamp === modalEvent.timestamp &&
+        latestEvent.pose === modalEvent.pose
+      ) {
+        setLatestEvent((prev) => ({ ...prev, status: capitalizedStatus }));
+      }
+
+      setModalEvent(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
-    axios.get('/api/suspicious_poses')
-      .then(res => setPoseData(res.data))
-      .catch(err => console.error(err));
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
+  const suspiciousToday = useMemo(
+    () => events.filter((e) => e.status === "Suspicious").length,
+    [events]
+  );
+
+  const unreviewedEvents = useMemo(
+    () => events.filter((e) => e.status === "Unreviewed").length,
+    [events]
+  );
+
   return (
-    <div className={styles.container}>
-      <h2 className={`${styles.title} login-title`}>Dashboard</h2>
-      {poseData ? (
-        <pre className={styles.preData}>
-          {poseData && Object.keys(poseData).length > 0
-            ? JSON.stringify(poseData, null, 2)
-            : 'No data.'}
-        </pre>
-      ) : (
-        <p className={styles.loading}>Loading...</p>
-      )}
+    <div className={styles.dashboardContainer}>
+      <NavBar />
+      <div className={styles.content}>
+        <h1 className={styles.heading}>Dashboard</h1>
+
+        <div className={styles.kpiRow}>
+          <KpiCard label="Suspicious Events Today" value={suspiciousToday} />
+          <KpiCard label="Unreviewed Events" value={unreviewedEvents} />
+          {latestEvent && (
+            <div className={styles.card}>
+              <div className={styles.kpiLabel}>Latest Event</div>
+              <div className={styles.kpiValue}>
+                {latestEvent.pose} ({latestEvent.status})
+              </div>
+              <div className={styles.kpiLabel}>{latestEvent.timestamp}</div>
+            </div>
+          )}
+        </div>
+
+        <div className={styles.eventSection}>
+          <div className={styles.tableHeader}>
+            <h2 className={styles.subheading}>Recent Events</h2>
+            <button
+              className={styles.buttonPrimary}
+              onClick={fetchData}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <FiRefreshCw />
+              Refresh
+            </button>
+          </div>
+
+          {loading ? (
+            <p className={styles.loading}>Loading...</p>
+          ) : (
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Pose</th>
+                    <th>Confidence</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((event) => (
+                    <tr key={event.id}>
+                      <td>{event.timestamp}</td>
+                      <td>{event.pose}</td>
+                      <td>{event.confidence}%</td>
+                      <td>{event.status}</td>
+                      <td>
+                        <button
+                          className={styles.buttonPrimary}
+                          onClick={() => setModalEvent(event)}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {modalEvent && (
+          <EventModal
+            event={modalEvent}
+            onClose={() => setModalEvent(null)}
+            onSave={handleSaveStatus}
+          />
+        )}
+      </div>
     </div>
   );
 }
