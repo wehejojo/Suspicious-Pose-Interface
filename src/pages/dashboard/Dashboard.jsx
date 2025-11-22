@@ -107,7 +107,7 @@ export default function DashboardPage() {
           {latestEvent && (
             <div className={styles.card}>
               <div className={styles.kpiLabel}>Latest Event</div>
-              <div className={styles.kpiValue}>
+              <div className={styles.kpiValue} style={{fontSize: "1rem"}}>
                 {latestEvent.pose} ({latestEvent.status})
               </div>
               <div className={styles.kpiLabel}>{latestEvent.timestamp}</div>

@@ -83,7 +83,7 @@ def violate():
         db = load_db('suspicious_poses.json', default=[])
         for idx, event in enumerate(db):
             event['id'] = idx
-        return jsonify(db[-10:]), 200
+        return jsonify(db), 200
 
     if request.method == 'POST':
         new_suspect = request.get_json()

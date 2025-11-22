@@ -9,6 +9,7 @@
   width: 100vw;
   top: 0;
   left: 0;
+  z-index: 1000;
 }
 
 .leftSection {
@@ -36,6 +37,11 @@
 
 .link:hover {
   color: #2172cf;
+}
+
+.link.active {
+  color: #1abc9c;
+  font-weight: 700;
 }
 
 .rightSection {

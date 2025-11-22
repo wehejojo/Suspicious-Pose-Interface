@@ -42,7 +42,7 @@ export default function Home() {
 
           <div className={styles['home-buttons']}>
             <button onClick={() => navigate('/dashboard')} className={styles['home-btn']}>Dashboard</button>
-            <button onClick={() => navigate('/charts')} className={styles['home-btn']}>Charts</button>
+            <button onClick={() => navigate('/charts')} className={styles['home-btn']}>Analytics</button>
             <button onClick={() => navigate('/feed')} className={styles['home-btn']}>Live Feed</button>
           </div>
         </div>
