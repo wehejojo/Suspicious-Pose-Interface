@@ -1,9 +1,15 @@
+import NavBar from '../../components/NavBar';
+import CameraPosePredictor from '../../components/CameraPosePreditcor'
+
 import styles from './Feed.module.css';
 
 export default function Feed() {
   return (
-    <>
-      <h2>Live Camera Feed</h2>
-    </>
+    <div className={styles.pageContainer}>
+      <NavBar />
+      <div className={styles.content}>
+        <CameraPosePredictor />
+      </div>
+    </div>
   );
 }

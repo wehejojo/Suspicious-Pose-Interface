@@ -24,4 +24,4 @@ dist-ssr
 *.sw?
 
 __pycache__/
-db/*.json
+db/logs/*.json
