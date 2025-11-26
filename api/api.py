@@ -15,7 +15,7 @@ os.makedirs(DB_DIR, exist_ok=True)
 os.makedirs(CRED_DIR, exist_ok=True)
 os.makedirs(IMG_DIR, exist_ok=True)
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "pose_classifier_rf.joblib")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "pose_classifier_rf_perframe.joblib")
 
 try:
     model = joblib.load(MODEL_PATH)
@@ -25,21 +25,15 @@ except Exception as e:
     model = None
 
 
-
-# ---------------------------------------------------------------------
-#   FIXED: Proper credential loader (does NOT use logs DB folder)
-# ---------------------------------------------------------------------
 def load_credentials():
     cred_path = os.path.join(CRED_DIR, 'user_details.json')
 
-    # If file missing → create default
     if not os.path.exists(cred_path):
-        default = [{"password": "password"}]  # default password if empty
+        default = [{"password": "password"}]
         with open(cred_path, 'w') as f:
             json.dump(default, f, indent=2)
         return default
 
-    # Attempt to read
     try:
         with open(cred_path, 'r') as f:
             data = json.load(f)
@@ -48,7 +42,6 @@ def load_credentials():
     except:
         pass
 
-    # If invalid → reset to default
     default = [{"password": "password"}]
     with open(cred_path, 'w') as f:
         json.dump(default, f, indent=2)
@@ -62,10 +55,6 @@ def save_credentials(data):
         json.dump(data, f, indent=2)
 
 
-
-# ---------------------------------------------------------------------
-#   LOAD_DB for logs remains unchanged
-# ---------------------------------------------------------------------
 def load_db(filename, default=None):
     if default is None:
         default = []
@@ -94,9 +83,6 @@ def save_db(filepath, data):
 
 
 
-# ---------------------------------------------------------------------
-#   ROUTES
-# ---------------------------------------------------------------------
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({'status': 'Alive'}), 200
@@ -129,7 +115,6 @@ def change_password():
     if not bcrypt.checkpw(old_pw.encode('utf-8'), hashed_password):
         return jsonify({"error": "Incorrect old password"}), 403
 
-    # Save new password (stored unhashed)
     creds[0]["password"] = new_pw
     save_credentials(creds)
 
@@ -220,23 +205,28 @@ def predict():
         return jsonify({"error": "Model not loaded"}), 500
 
     try:
+        # Extract and flatten features to ensure proper shape
         data = request.get_json()
-        features = np.array(data.get("features", []), dtype=float)
+        features = np.array(data.get("features", []), dtype=float).flatten()
 
         expected_len = model.n_features_in_
 
+        # Pad or truncate to match the model's expected number of features
         if features.size < expected_len:
             features = np.pad(features, (0, expected_len - features.size), 'constant')
         elif features.size > expected_len:
             features = features[:expected_len]
 
+        # Reshape to (1, n_features) for prediction
         features = features.reshape(1, -1)
 
+        # Perform prediction
         pred = model.predict(features)[0]
 
+        # Try to get probabilities (if supported)
         try:
             prob = model.predict_proba(features)[0].tolist()
-        except:
+        except AttributeError:
             prob = None
 
         return jsonify({
@@ -249,14 +239,10 @@ def predict():
 
 
 
-# ---------------------------------------------------------------------
-#   APPLICATION STARTUP
-# ---------------------------------------------------------------------
 if __name__ == "__main__":
     creds = load_credentials()
     password = creds[0]["password"]
 
-    # Hash password for runtime comparisons
     print(password)
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
