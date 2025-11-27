@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./Modal.module.css";
+import styles from "./EventModal.module.css";
 
 export default function EventModal({ event, onClose, onSave }) {
   const [status, setStatus] = React.useState(event.status);

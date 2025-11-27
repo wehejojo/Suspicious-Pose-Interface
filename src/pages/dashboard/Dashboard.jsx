@@ -1,11 +1,20 @@
 import axios from "axios";
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { FiRefreshCw } from "react-icons/fi";
+import { io } from 'socket.io-client';
 
 import NavBar from "../../components/NavBar";
 import EventModal from "../../components/EventModal";
+import NotificationModal from "../../components/NotificationModal";
 
 import styles from "./Dashboard.module.css";
+
+const socket = io("http://localhost:5000", {
+  path: "/socket.io",
+  transports: ["websocket"],
+});
+
+
 
 const KpiCard = ({ label, value }) => (
   <div className={styles.card}>
@@ -14,7 +23,6 @@ const KpiCard = ({ label, value }) => (
   </div>
 );
 
-// Capitalize first letter
 const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
 export default function DashboardPage() {
@@ -22,6 +30,10 @@ export default function DashboardPage() {
   const [latestEvent, setLatestEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalEvent, setModalEvent] = useState(null);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMsg, setNotificationMsg] = useState("");
+
+  const lastAlertedTimestamp = useRef(null);
 
   const fetchData = async () => {
     try {
@@ -85,6 +97,30 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+      socket.emit("join", "dashboard");
+      console.log("Joined dashboard room");
+    });
+
+    socket.on("alert", (data) => {
+      console.log("Received alert:", data);
+      if (data.timestamp !== lastAlertedTimestamp.current) {
+        lastAlertedTimestamp.current = data.timestamp;
+        setNotificationMsg(`Pose detected: ${data.pose} (Confidence: ${(data.confidence * 100).toFixed(1)}%)`);
+        setShowNotification(true);
+        fetchData();
+      }
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("alert");
+    };
+  }, []);
+
+
   const suspiciousToday = useMemo(
     () => events.filter((e) => e.status === "Suspicious").length,
     [events]
@@ -107,7 +143,7 @@ export default function DashboardPage() {
           {latestEvent && (
             <div className={styles.card}>
               <div className={styles.kpiLabel}>Latest Event</div>
-              <div className={styles.kpiValue} style={{fontSize: "1rem"}}>
+              <div className={styles.kpiValue} style={{ fontSize: "1rem" }}>
                 {latestEvent.pose} ({latestEvent.status})
               </div>
               <div className={styles.kpiLabel}>{latestEvent.timestamp}</div>
@@ -173,6 +209,12 @@ export default function DashboardPage() {
           />
         )}
       </div>
+      <NotificationModal
+        open={showNotification}
+        message={notificationMsg}
+        onClose={() => setShowNotification(false)}
+        autoCloseMs={3000}
+      />
     </div>
   );
 }

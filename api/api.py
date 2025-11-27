@@ -2,10 +2,12 @@ import bcrypt
 import json
 import os
 from flask import Flask, jsonify, request
+from flask_socketio import SocketIO, emit, join_room
 import joblib
 import numpy as np
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 DB_DIR = os.path.join(os.path.dirname(__file__), '..', 'db', 'logs')
 CRED_DIR = os.path.join(os.path.dirname(__file__), '..', 'db', 'credentials')
@@ -16,6 +18,14 @@ os.makedirs(CRED_DIR, exist_ok=True)
 os.makedirs(IMG_DIR, exist_ok=True)
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "pose_classifier_rf_perframe.joblib")
+
+DANGER_POSES = [
+    "Punching",
+    "Kicking",
+    "Lying / Collapsed",
+    "Weapon Pointing / Gun Aiming",
+    "Threatening Stance / Aggressive Confrontation"
+]
 
 try:
     model = joblib.load(MODEL_PATH)
@@ -198,6 +208,13 @@ def model_info():
     return jsonify({"expected_features": model.n_features_in_}), 200
 
 
+DANGER_POSES = [
+    "Punching",
+    "Kicking",
+    "Lying / Collapsed",
+    "Weapon Pointing / Gun Aiming",
+    "Threatening Stance / Aggressive Confrontation"
+]
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -205,29 +222,42 @@ def predict():
         return jsonify({"error": "Model not loaded"}), 500
 
     try:
-        # Extract and flatten features to ensure proper shape
         data = request.get_json()
         features = np.array(data.get("features", []), dtype=float).flatten()
 
         expected_len = model.n_features_in_
 
-        # Pad or truncate to match the model's expected number of features
         if features.size < expected_len:
             features = np.pad(features, (0, expected_len - features.size), 'constant')
         elif features.size > expected_len:
             features = features[:expected_len]
 
-        # Reshape to (1, n_features) for prediction
         features = features.reshape(1, -1)
-
-        # Perform prediction
         pred = model.predict(features)[0]
 
-        # Try to get probabilities (if supported)
         try:
             prob = model.predict_proba(features)[0].tolist()
+            pred_index = list(model.classes_).index(pred)
+            confidence = prob[pred_index]
         except AttributeError:
             prob = None
+            confidence = None
+
+        is_dangerous = str(pred).strip().lower() in [pose.lower() for pose in DANGER_POSES] \
+            and confidence is not None  \
+            and confidence > 0.5
+
+        if is_dangerous:
+            socketio.emit(
+                "alert",
+                {
+                    "pose": str(pred),
+                    "timestamp": data.get("timestamp") or None,
+                    "confidence": confidence,
+                    "probabilities": prob
+                },
+                room="dashboard"
+            )
 
         return jsonify({
             "prediction": str(pred),
@@ -238,6 +268,10 @@ def predict():
         return jsonify({"error": str(e)}), 500
 
 
+@socketio.on('join')
+def handle_join(room_name):
+    join_room(room_name)
+    print(f"Socket {request.sid} joined room {room_name}")
 
 if __name__ == "__main__":
     creds = load_credentials()
@@ -246,4 +280,4 @@ if __name__ == "__main__":
     print(password)
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
-    app.run(debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)

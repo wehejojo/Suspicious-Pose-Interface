@@ -2,6 +2,9 @@ import React, { useRef, useEffect, useState } from "react";
 import * as posedetection from "@tensorflow-models/pose-detection";
 import * as tf from "@tensorflow/tfjs-core";
 import "@tensorflow/tfjs-backend-webgl";
+import { io } from 'socket.io-client';
+
+const socket = io("/", { path: "/socket.io" });
 
 export default function CameraPosePredictor() {
   const videoRef = useRef(null);
@@ -76,7 +79,7 @@ export default function CameraPosePredictor() {
 
   const detectFrame = async () => {
     frameCountRef.current += 1;
-    const runInference = frameCountRef.current % 3 === 0; // every 3 frames
+    const runInference = frameCountRef.current % 8 === 0;
     if (!detector || !videoRef.current) {
       requestAnimationFrame(detectFrame);
       return;
@@ -96,7 +99,10 @@ export default function CameraPosePredictor() {
           fetch("/api/predict", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ features })
+            body: JSON.stringify({
+              features,
+              timestamp: new Date().toISOString()
+            })
           })
             .then(res => res.json())
             .then(data => {
