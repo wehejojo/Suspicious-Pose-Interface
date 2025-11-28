@@ -120,3 +120,16 @@ body, html {
 .home-btn:hover {
   background-color: #1565c0;
 }
+
+.change-password-link {
+  margin-top: 15px;
+  color: #0d47a1;
+  font-size: 0.9rem;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.change-password-link:hover {
+  color: #1565c0;
+}

@@ -1,5 +1,5 @@
 import NavBar from '../../components/NavBar';
-import CameraPosePredictor from '../../components/CameraPosePreditcor'
+import CameraPosePredictor from '../../components/CameraPosePredictor'
 
 import styles from './Feed.module.css';
 

@@ -1,0 +1,26 @@
+.container {
+  text-align: center;
+  position: relative;
+  display: inline-block;
+}
+
+.video {
+  border-radius: 10px;
+  border: 2px solid #555;
+}
+
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.poseLabel {
+  margin-top: 20px;
+}
+
+.title {
+  margin-bottom: 10px;
+}

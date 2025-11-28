@@ -7,6 +7,7 @@ import Home from './pages/home/Home';
 import Dashboard from './pages/dashboard/Dashboard';
 import Charts from './pages/charts/Charts';
 import Feed from './pages/feed/Feed';
+import Settings from './pages/settings/Settings'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/charts" element={<Charts />} />
           <Route path="/feed" element={<Feed />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </BrowserRouter>
     </>

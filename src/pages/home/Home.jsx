@@ -45,6 +45,8 @@ export default function Home() {
             <button onClick={() => navigate('/charts')} className={styles['home-btn']}>Analytics</button>
             <button onClick={() => navigate('/feed')} className={styles['home-btn']}>Live Feed</button>
           </div>
+
+          <p className={styles['change-password-link']} onClick={() => navigate('/settings')}>Change Password</p>
         </div>
       </div>
     </>

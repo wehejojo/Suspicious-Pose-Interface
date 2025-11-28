@@ -74,6 +74,15 @@
   opacity: 0.6;
 }
 
+.notificationImage {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 10px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+
 @keyframes fadeIn {
   from {
     opacity: 0;

@@ -1,13 +1,17 @@
-import bcrypt
-import json
 import os
-from flask import Flask, jsonify, request
-from flask_socketio import SocketIO, emit, join_room
-import joblib
+import json
+import time
+import bcrypt
+import base64
+import datetime
 import numpy as np
+from flask import Flask, jsonify, request, send_from_directory
+from flask_socketio import SocketIO, emit, join_room
+
+from detector import detect_action
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 DB_DIR = os.path.join(os.path.dirname(__file__), '..', 'db', 'logs')
 CRED_DIR = os.path.join(os.path.dirname(__file__), '..', 'db', 'credentials')
@@ -17,23 +21,10 @@ os.makedirs(DB_DIR, exist_ok=True)
 os.makedirs(CRED_DIR, exist_ok=True)
 os.makedirs(IMG_DIR, exist_ok=True)
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "pose_classifier_rf_perframe.joblib")
+HIGH_CONFIDENCE_THRESHOLD = 0.8
 
-DANGER_POSES = [
-    "Punching",
-    "Kicking",
-    "Lying / Collapsed",
-    "Weapon Pointing / Gun Aiming",
-    "Threatening Stance / Aggressive Confrontation"
-]
-
-try:
-    model = joblib.load(MODEL_PATH)
-    print("✔ Loaded RandomForest model")
-except Exception as e:
-    print("❌ Failed to load model:", e)
-    model = None
-
+last_saved_time = {}
+SNAPSHOT_COOLDOWN = 5
 
 def load_credentials():
     cred_path = os.path.join(CRED_DIR, 'user_details.json')
@@ -56,7 +47,6 @@ def load_credentials():
     with open(cred_path, 'w') as f:
         json.dump(default, f, indent=2)
     return default
-
 
 
 def save_credentials(data):
@@ -92,11 +82,33 @@ def save_db(filepath, data):
         json.dump(data, f, indent=2)
 
 
+def log_suspicious_pose(pose, conf, snapshot_filename=None):
+    suspicious_poses = load_db('suspicious_poses.json', default=[])
+    
+    new_suspicious_pose_entry = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "pose": pose,
+        "confidence": int(round(conf)),
+        "status": "unreviewed"
+    }
+
+    if snapshot_filename:
+        new_suspicious_pose_entry["image-path"] = snapshot_filename
+
+    suspicious_poses.append(new_suspicious_pose_entry)
+    save_db(os.path.join(DB_DIR, 'suspicious_poses.json'), suspicious_poses)
+
+
 
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({'status': 'Alive'}), 200
 
+
+@app.route("/imgs/<filename>")
+def serve_image(filename):
+    """Serve images stored in the db/imgs folder."""
+    return send_from_directory(IMG_DIR, filename)
 
 
 @app.route('/api/login', methods=['POST'])
@@ -110,26 +122,30 @@ def login():
     return jsonify({'success': False, 'error': 'Invalid Credentials'}), 401
 
 
-
-@app.route('/api/change_password', methods=['POST'])
+@app.route('/api/change-password', methods=['POST'])
 def change_password():
     creds = load_credentials()
     data = request.get_json()
 
-    old_pw = data.get("old_password")
-    new_pw = data.get("new_password")
+    old_pw = data.get("currentPassword")
+    new_pw = data.get("newPassword")
 
     if not old_pw or not new_pw:
         return jsonify({"error": "Missing fields"}), 400
 
+    hashed_password = creds[0]["password"].encode('utf-8')
+
     if not bcrypt.checkpw(old_pw.encode('utf-8'), hashed_password):
         return jsonify({"error": "Incorrect old password"}), 403
+    
+    if bcrypt.checkpw(new_pw.encode('utf-8'), hashed_password):
+        return jsonify({"error": "Cannot reuse old password"}), 400
 
-    creds[0]["password"] = new_pw
+    hashed_new = bcrypt.hashpw(new_pw.encode('utf-8'), bcrypt.gensalt())
+    creds[0]["password"] = hashed_new.decode('utf-8')
     save_credentials(creds)
 
     return jsonify({"success": True}), 200
-
 
 
 @app.route('/api/latest', methods=['GET'])
@@ -149,7 +165,6 @@ def latest():
     }
 
     return jsonify(filtered_event), 200
-
 
 
 @app.route('/api/suspicious_poses', methods=['GET', 'POST'])
@@ -176,7 +191,6 @@ def violate():
         return jsonify(new_suspect), 201
 
 
-
 @app.route('/api/suspicious_poses/<int:event_idx>', methods=['PATCH', 'DELETE'])
 def update_event(event_idx):
     db = load_db('suspicious_poses.json', default=[])
@@ -201,83 +215,79 @@ def update_event(event_idx):
 
 
 
-@app.route('/api/model-info', methods=['GET'])
-def model_info():
-    if model is None:
-        return jsonify({"error": "Model not loaded"}), 500
-    return jsonify({"expected_features": model.n_features_in_}), 200
-
-
-DANGER_POSES = [
-    "Punching",
-    "Kicking",
-    "Lying / Collapsed",
-    "Weapon Pointing / Gun Aiming",
-    "Threatening Stance / Aggressive Confrontation"
-]
-
-@app.route('/api/predict', methods=['POST'])
-def predict():
-    if model is None:
-        return jsonify({"error": "Model not loaded"}), 500
-
-    try:
-        data = request.get_json()
-        features = np.array(data.get("features", []), dtype=float).flatten()
-
-        expected_len = model.n_features_in_
-
-        if features.size < expected_len:
-            features = np.pad(features, (0, expected_len - features.size), 'constant')
-        elif features.size > expected_len:
-            features = features[:expected_len]
-
-        features = features.reshape(1, -1)
-        pred = model.predict(features)[0]
-
-        try:
-            prob = model.predict_proba(features)[0].tolist()
-            pred_index = list(model.classes_).index(pred)
-            confidence = prob[pred_index]
-        except AttributeError:
-            prob = None
-            confidence = None
-
-        is_dangerous = str(pred).strip().lower() in [pose.lower() for pose in DANGER_POSES] \
-            and confidence is not None  \
-            and confidence > 0.5
-
-        if is_dangerous:
-            socketio.emit(
-                "alert",
-                {
-                    "pose": str(pred),
-                    "timestamp": data.get("timestamp") or None,
-                    "confidence": confidence,
-                    "probabilities": prob
-                },
-                room="dashboard"
-            )
-
-        return jsonify({
-            "prediction": str(pred),
-            "probabilities": prob
-        }), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@socketio.on('join')
+@socketio.on("join")
 def handle_join(room_name):
     join_room(room_name)
-    print(f"Socket {request.sid} joined room {room_name}")
+
+
+@socketio.on("keypoints")
+def handle_keypoints(data):
+    try:
+        kp = np.array(data["keypoints"], dtype=float)
+        if kp.shape != (17, 2):
+            emit("pose", {"error": "expected 17 keypoints of shape (17,2)"})
+            return
+    except Exception as e:
+        emit("pose", {"error": "invalid keypoints", "detail": str(e)})
+        return
+
+    result = detect_action(kp)
+    emit("pose", result)
+
+
+@socketio.on("high_confidence_pose")
+def handle_high_conf_pose(data):
+    pose = data.get("pose", "unknown")
+    confidence = data.get("confidence", 0)
+    snapshot_b64 = data.get("snapshot")
+
+    now = time.time()
+    last_time = last_saved_time.get(pose, 0)
+
+    if now - last_time < SNAPSHOT_COOLDOWN:
+        emit("pose", {"status": "cooldown", "pose": pose})
+        return
+
+    last_saved_time[pose] = now
+
+    filename = None
+    image_path = None
+
+    if snapshot_b64:
+        try:
+            if "," in snapshot_b64:
+                _, snapshot_b64 = snapshot_b64.split(",", 1)
+            img_data = base64.b64decode(snapshot_b64)
+            filename = f"{pose}_{int(confidence*100)}_{int(time.time())}.png"
+            filepath = os.path.join(IMG_DIR, filename)
+            with open(filepath, "wb") as f:
+                f.write(img_data)
+
+            image_path = os.path.join("db", "imgs", filename)
+        except Exception as e:
+            emit("pose", {"error": f"Failed to save snapshot: {e}"})
+            return
+
+    log_suspicious_pose(pose, confidence * 100, snapshot_filename=filename)
+
+    emit("pose", {"status": "saved", "pose": pose, "confidence": int(confidence*100)})
+
+    emit("alert", {
+        "pose": pose,
+        "confidence": confidence,
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "image-path": filename
+    }, broadcast=True)
+
+
 
 if __name__ == "__main__":
     creds = load_credentials()
-    password = creds[0]["password"]
 
-    print(password)
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    if not creds[0]["password"].startswith("$2b$"):
+        hashed_password = bcrypt.hashpw(creds[0]["password"].encode("utf-8"), bcrypt.gensalt())
+        creds[0]["password"] = hashed_password.decode("utf-8")
+        save_credentials(creds)
 
+    print("Running WebSocket Pose server on ws://localhost:5000 (threading mode)")
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)

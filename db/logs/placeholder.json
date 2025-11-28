@@ -1,0 +1,74 @@
+[
+  {
+    "timestamp": "2025-11-21 10:12:03",
+    "pose": "Punching",
+    "confidence": 87,
+    "status": "suspicious"
+  },
+  {
+    "timestamp": "2025-11-21 09:02:17",
+    "pose": "Punching",
+    "confidence": 79,
+    "status": "Unreviewed"
+  },
+  {
+    "timestamp": "2025-11-21 09:50:00",
+    "pose": "Punching",
+    "confidence": 80,
+    "status": "Unreviewed"
+  },
+  {
+    "timestamp": "2025-11-21 10:24:15",
+    "pose": "Kicking",
+    "confidence": 92,
+    "status": "Unreviewed"
+  },
+  {
+    "timestamp": "2025-11-21 09:15:50",
+    "pose": "Kicking",
+    "confidence": 88,
+    "status": "Suspicious"
+  },
+  {
+    "timestamp": "2025-11-21 08:30:45",
+    "pose": "Kicking",
+    "confidence": 85,
+    "status": "Unreviewed"
+  },
+  {
+    "timestamp": "2025-11-21 09:45:22",
+    "pose": "Lying / Collapsed",
+    "confidence": 95,
+    "status": "Unreviewed"
+  },
+  {
+    "timestamp": "2025-11-21 08:42:30",
+    "pose": "Lying / Collapsed",
+    "confidence": 91,
+    "status": "Suspicious"
+  },
+  {
+    "timestamp": "2025-11-21 08:55:05",
+    "pose": "Lying / Collapsed",
+    "confidence": 83,
+    "status": "Unreviewed"
+  },
+  {
+    "timestamp": "2025-11-21 09:30:00",
+    "pose": "Weapon Pointing / Gun Aiming",
+    "confidence": 80,
+    "status": "Unreviewed"
+  },
+  {
+    "timestamp": "2025-11-21 09:31:00",
+    "pose": "Weapon Pointing / Gun Aiming",
+    "confidence": 82,
+    "status": "Unreviewed"
+  },
+  {
+    "timestamp": "2025-11-21 09:32:00",
+    "pose": "Weapon Pointing / Gun Aiming",
+    "confidence": 81,
+    "status": "Unreviewed"
+  }
+]
