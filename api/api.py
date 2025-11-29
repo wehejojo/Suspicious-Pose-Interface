@@ -111,8 +111,13 @@ def serve_image(filename):
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    input_pw = data.get('password')
+    data = request.get_json()
+    if not data or "password" not in data:
+        return jsonify({'success': False, 'error': 'Missing password'}), 400
+
+    input_pw = data["password"]
+    creds = load_credentials()
+    hashed_password = creds[0]["password"].strip().encode('utf-8')
 
     if bcrypt.checkpw(input_pw.encode('utf-8'), hashed_password):
         return jsonify({'success': True, 'redirect-endpoint': '/home'}), 200
