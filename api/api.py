@@ -1,11 +1,9 @@
-import os
-import json
-import time
-import bcrypt
-import base64
-import datetime
+import openpyxl
 import numpy as np
-from flask import Flask, jsonify, request, send_from_directory
+import os, json, time, bcrypt, base64, datetime
+from io import BytesIO
+
+from flask import Flask, jsonify, request, send_from_directory, send_file
 from flask_socketio import SocketIO, emit, join_room
 
 from detector import detect_action
@@ -167,8 +165,8 @@ def latest():
     return jsonify(filtered_event), 200
 
 
-@app.route('/api/suspicious_poses', methods=['GET', 'POST'])
-def violate():
+@app.route('/api/suspicious_poses', methods=['GET', 'POST', 'DELETE'])
+def suspicious_poses_handler():
     filepath = os.path.join(DB_DIR, 'suspicious_poses.json')
 
     if request.method == 'GET':
@@ -189,6 +187,10 @@ def violate():
         db.append(new_suspect)
         save_db(filepath, db)
         return jsonify(new_suspect), 201
+
+    if request.method == 'DELETE':
+        save_db(filepath, [])
+        return jsonify({"success": True, "message": "All logs deleted"}), 200
 
 
 @app.route('/api/suspicious_poses/<int:event_idx>', methods=['PATCH', 'DELETE'])
@@ -212,6 +214,47 @@ def update_event(event_idx):
         return jsonify(deleted), 200
 
     return jsonify({"error": "No valid fields to update"}), 400
+
+
+@app.route("/api/export", methods=['GET'])
+def export_data():
+    db = load_db('suspicious_poses.json')
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Suspicious Poses"
+
+    headers = ["ID", "Timestamp", "Pose", "Confidence", "Status"]
+    ws.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col)
+        cell.font = openpyxl.styles.Font(bold=True)
+        cell.alignment = openpyxl.styles.Alignment(horizontal="center")
+
+    for idx, log in enumerate(db):
+        ws.append([
+            idx,
+            log.get('timestamp', 'N/A'),
+            log.get('pose', 'N/A'),
+            log.get('confidence', 'N/A'),
+            log.get('status', 'N/A'),
+        ])
+
+    for column_cells in ws.columns:
+        length = max(len(str(cell.value)) if cell.value is not None else 0 for cell in column_cells)
+        ws.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="suspicious_poses.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 
 

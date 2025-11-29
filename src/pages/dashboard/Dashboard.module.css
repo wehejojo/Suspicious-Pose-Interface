@@ -76,6 +76,13 @@ html {
   align-items: center;
 }
 
+.utilContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+
 .tableWrapper {
   background: #ffffff;
   border-radius: 12px;

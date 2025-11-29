@@ -1,3 +1,13 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Modal backdrop */
 .modalBackdrop {
   position: fixed;
   top: 0;
@@ -11,23 +21,47 @@
   z-index: 999;
 }
 
+/* Modal content */
 .modalContent {
   background: #ffffff;
-  padding: 20px;
+  padding: 20px 25px;
   border-radius: 12px;
   max-width: 500px;
   width: 90%;
   box-shadow: 0 10px 25px rgba(0,0,0,0.15);
 }
 
-.buttonPrimary {
+/* Buttons */
+.buttonPrimary,
+.buttonSave,
+.buttonSecondary {
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 1rem;
   padding: 10px 16px;
-  background-color: #0d47a1; /* Dashboard primary blue */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.buttonDelete {
+  padding: 10px 16px;
+  background-color: #e74c3c; /* Red for destructive action */
   color: #ffffff;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.3s;
+}
+
+.buttonDelete:hover {
+  background-color: #c0392b;
+}
+
+.buttonPrimary {
+  background-color: #0d47a1;
+  color: #ffffff;
 }
 
 .buttonPrimary:hover {
@@ -35,13 +69,8 @@
 }
 
 .buttonSave {
-  padding: 10px 16px;
-  background-color: #1abc9c; /* Green for save */
+  background-color: #1abc9c;
   color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.3s;
 }
 
 .buttonSave:hover {
@@ -49,15 +78,47 @@
 }
 
 .buttonSecondary {
-  padding: 10px 16px;
-  background-color: #7f8c8d; /* Gray for cancel */
+  background-color: #7f8c8d;
   color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.3s;
 }
 
 .buttonSecondary:hover {
   background-color: #606c70;
 }
+
+/* Dropdown styling */
+.modalContent select {
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: #ffffff;
+  color: #0d47a1;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  width: 100%;
+  margin-top: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'><path fill='%230d47a1' d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 32px;
+}
+
+/* Dropdown hover/focus */
+.modalContent select:hover {
+  border-color: #1565c0;
+  box-shadow: 0 0 5px rgba(21, 101, 192, 0.4);
+}
+
+.modalContent select:focus {
+  border-color: #0d47a1;
+  box-shadow: 0 0 6px rgba(13, 71, 161, 0.5);
+}
+

@@ -5,7 +5,7 @@ import styles from "./NotificationModal.module.css";
 export default function NotificationModal({
   open,
   message,
-  imageSrc,        // NEW prop for image
+  imageSrc,
   onClose,
   autoCloseMs = 3000,
 }) {
@@ -32,7 +32,6 @@ export default function NotificationModal({
         <h2 className={styles.title}>Notification</h2>
         <p className={styles.message}>{message}</p>
 
-        {/* Show image if provided */}
         {imageSrc && (
           <img
             src={imageSrc}

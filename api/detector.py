@@ -1,10 +1,16 @@
 import numpy as np
 
+# ---------------------------
+# Last positions (global)
+# ---------------------------
 _last_left_wrist = None
 _last_right_wrist = None
 _last_left_ankle = None
 _last_right_ankle = None
 
+# ---------------------------
+# Utility functions
+# ---------------------------
 def vector_angle(a, b, c):
     ba = a - b
     bc = c - b
@@ -12,10 +18,10 @@ def vector_angle(a, b, c):
     cosv = np.clip(np.dot(ba, bc) / denom, -1.0, 1.0)
     return float(np.degrees(np.arccos(cosv)))
 
-def compute_speed(prev, curr):
+def compute_speed(prev, curr, delta_time=1.0):
     if prev is None:
         return 0.0
-    return float(np.linalg.norm(curr - prev))
+    return float(np.linalg.norm(curr - prev) / delta_time)
 
 def midpoint(a, b):
     return (a + b) / 2.0
@@ -38,7 +44,7 @@ def vertical_height_range(kp):
 # ---------------------------
 # Punch detection
 # ---------------------------
-def detect_punch_conf(kp, last_positions):
+def detect_punch_conf(kp, last_positions, delta_time=1.0):
     Ls, Rs = kp[5], kp[6]
     Le, Re = kp[7], kp[8]
     Lw, Rw = kp[9], kp[10]
@@ -46,8 +52,8 @@ def detect_punch_conf(kp, last_positions):
     left_elbow_angle = vector_angle(Ls, Le, Lw)
     right_elbow_angle = vector_angle(Rs, Re, Rw)
 
-    left_speed = compute_speed(last_positions.get("lw"), Lw)
-    right_speed = compute_speed(last_positions.get("rw"), Rw)
+    left_speed = compute_speed(last_positions.get("lw"), Lw, delta_time)
+    right_speed = compute_speed(last_positions.get("rw"), Rw, delta_time)
 
     right_forward = Rw[0] - Rs[0]
     left_forward = Ls[0] - Lw[0]
@@ -71,7 +77,7 @@ def detect_punch_conf(kp, last_positions):
 # ---------------------------
 # Kick detection
 # ---------------------------
-def detect_kick_conf(kp, last_positions):
+def detect_kick_conf(kp, last_positions, delta_time=1.0):
     Lh, Rh = kp[11], kp[12]
     Lk, Rk = kp[13], kp[14]
     La, Ra = kp[15], kp[16]
@@ -79,8 +85,8 @@ def detect_kick_conf(kp, last_positions):
     left_knee_angle = vector_angle(Lh, Lk, La)
     right_knee_angle = vector_angle(Rh, Rk, Ra)
 
-    left_speed = compute_speed(last_positions.get("la"), La)
-    right_speed = compute_speed(last_positions.get("ra"), Ra)
+    left_speed = compute_speed(last_positions.get("la"), La, delta_time)
+    right_speed = compute_speed(last_positions.get("ra"), Ra, delta_time)
 
     lift_thresh = 20.0
     left_lift = (La[1] < Lk[1] - lift_thresh)
@@ -126,30 +132,64 @@ def detect_kick_conf(kp, last_positions):
     return left_conf, right_conf, left_type, right_type
 
 # ---------------------------
+# Firearm pose detection
+# ---------------------------
+def detect_firearm_pose_conf(kp):
+    Ls, Rs = kp[5], kp[6]
+    Le, Re = kp[7], kp[8]
+    Lw, Rw = kp[9], kp[10]
+
+    left_elbow_angle = vector_angle(Ls, Le, Lw)
+    right_elbow_angle = vector_angle(Rs, Re, Rw)
+
+    # Wrists roughly horizontal with shoulders
+    height_thresh = 40.0
+    left_height_ok = abs(Lw[1] - Ls[1]) < height_thresh
+    right_height_ok = abs(Rw[1] - Rs[1]) < height_thresh
+
+    # Wrists forward (X-axis)
+    left_forward_ok = (Ls[0] - Lw[0]) > 20.0
+    right_forward_ok = (Rw[0] - Rs[0]) > 20.0
+
+    def arm_score(angle, height_ok, forward_ok):
+        s_angle = np.clip((angle - 150.0)/30.0, 0.0, 1.0)
+        s_height = 0.5 if height_ok else 0.0
+        s_forward = 0.5 if forward_ok else 0.0
+        return np.clip((s_angle + s_height + s_forward)/3.0, 0.0, 1.0)
+
+    left_conf = arm_score(left_elbow_angle, left_height_ok, left_forward_ok)
+    right_conf = arm_score(right_elbow_angle, right_height_ok, right_forward_ok)
+
+    firearm_conf = (left_conf + right_conf)/2.0
+    return firearm_conf
+
+# ---------------------------
 # Unified action detector
 # ---------------------------
-def detect_action(keypoints):
+def detect_action(keypoints, delta_time=1.0):
     global _last_left_wrist, _last_right_wrist, _last_left_ankle, _last_right_ankle
 
     kp = np.array(keypoints)
     last_wrists = {"lw": _last_left_wrist, "rw": _last_right_wrist}
     last_ankles = {"la": _last_left_ankle, "ra": _last_right_ankle}
 
-    left_punch_conf, right_punch_conf = detect_punch_conf(kp, last_wrists)
-    left_kick_conf, right_kick_conf, left_kick_type, right_kick_type = detect_kick_conf(kp, last_ankles)
+    # Punch / Kick
+    left_punch_conf, right_punch_conf = detect_punch_conf(kp, last_wrists, delta_time)
+    left_kick_conf, right_kick_conf, left_kick_type, right_kick_type = detect_kick_conf(kp, last_ankles, delta_time)
 
+    # Lying detection
     torso_ang = torso_horizontal(kp)
     y_span = vertical_height_range(kp)
-
-    # Lying confidence
     torso_angle_threshold = 30.0
     y_span_threshold = 120.0
     lying_conf = 0.0
-    lying_ok = (torso_ang < torso_angle_threshold) and (y_span < y_span_threshold)
-    if lying_ok:
+    if (torso_ang < torso_angle_threshold) and (y_span < y_span_threshold):
         s_angle = np.clip((torso_angle_threshold - torso_ang)/torso_angle_threshold, 0.0, 1.0)
         s_height = np.clip((y_span_threshold - y_span)/y_span_threshold, 0.0, 1.0)
         lying_conf = np.clip((s_angle + s_height)/2.0, 0.0, 1.0)
+
+    # Firearm detection
+    firearm_conf = detect_firearm_pose_conf(kp)
 
     # Update last positions
     _last_left_wrist = kp[9].copy()
@@ -161,6 +201,7 @@ def detect_action(keypoints):
     threshold_punch = 0.55
     threshold_kick = 0.5
     threshold_lying = 0.45
+    threshold_firearm = 0.6
 
     # Build candidate list
     candidates = []
@@ -174,19 +215,19 @@ def detect_action(keypoints):
         candidates.append(("right_kick", right_kick_conf))
     if lying_conf > threshold_lying:
         candidates.append(("lying", lying_conf))
+    if firearm_conf > threshold_firearm:
+        candidates.append(("firearm", firearm_conf))
 
-    if len(candidates) == 0:
-        label = "neutral"
-    else:
-        candidates.sort(key=lambda x: x[1], reverse=True)
-        label = candidates[0][0]
+    # Choose label
+    label = "neutral" if not candidates else max(candidates, key=lambda x: x[1])[0]
 
     confidences = {
         "left_punch": float(np.clip(left_punch_conf, 0.0, 1.0)),
         "right_punch": float(np.clip(right_punch_conf, 0.0, 1.0)),
         "left_kick": float(np.clip(left_kick_conf, 0.0, 1.0)),
         "right_kick": float(np.clip(right_kick_conf, 0.0, 1.0)),
-        "lying": float(np.clip(lying_conf, 0.0, 1.0))
+        "lying": float(np.clip(lying_conf, 0.0, 1.0)),
+        "firearm": float(np.clip(firearm_conf, 0.0, 1.0))
     }
 
     extra = {

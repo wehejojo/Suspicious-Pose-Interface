@@ -64,6 +64,7 @@ export default function CameraPosePredictor() {
             { label: "Left Kick", value: data.confidences.left_kick },
             { label: "Right Kick", value: data.confidences.right_kick },
             { label: "Lying Down", value: data.confidences.lying },
+            { label: "Holding Firearm", value: data.confidences.firearm }, 
           ];
 
           const highest = entries.reduce((max, entry) =>

@@ -61,7 +61,7 @@ export default function ChartsPage() {
   const topSuspiciousPoses = useMemo(() => {
     const freq = {};
     events.filter(e => e.status === "Suspicious")
-          .forEach(e => { freq[e.pose] = (freq[e.pose] || 0) + 1; });
+      .forEach(e => { freq[e.pose] = (freq[e.pose] || 0) + 1; });
     return Object.entries(freq)
       .map(([pose, count]) => ({ pose, count }))
       .sort((a, b) => b.count - a.count)
@@ -94,7 +94,6 @@ export default function ChartsPage() {
     <div className={styles.chartsContainer}>
       <NavBar />
       <div className={styles.content}>
-        {/* <h1 className={styles.heading}>Analytics & Visualization</h1> */}
 
         <div className={styles.grid}>
           {/* Pie Chart */}
