@@ -2,17 +2,23 @@ import React, { useRef, useEffect, useState } from "react";
 import * as posedetection from "@tensorflow-models/pose-detection";
 import * as tf from "@tensorflow/tfjs";
 import "@tensorflow/tfjs-backend-webgl";
+import emailjs from "@emailjs/browser";
 import { io } from "socket.io-client";
 import styles from "./CameraPosePredictor.module.css";
 
 export default function CameraPosePredictor() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const snapshotCanvasRef = useRef(null); // Reusable offscreen canvas
+  const snapshotCanvasRef = useRef(null);
+  const emailSentRef = useRef({});
   const [pose, setPose] = useState("neutral");
 
   const lastSnapshotTime = {};
   const SNAPSHOT_COOLDOWN = 5000;
+
+  const SERVICE_ID = "service_yv310xd";
+  const TEMPLATE_ID = "template_dpg783k";
+  const PUBLIC_KEY = "CLvTgPmSeNo37nrfI";
 
   useEffect(() => {
     const socket = io("http://localhost:5000");
@@ -79,7 +85,6 @@ export default function CameraPosePredictor() {
           if (highest.value >= 0.8 && now - lastTime > SNAPSHOT_COOLDOWN) {
             lastSnapshotTime[highest.label] = now;
 
-            // Reuse offscreen canvas
             snapCtx.clearRect(0, 0, snapCanvas.width, snapCanvas.height);
             snapCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
             const snapshot = snapCanvas.toDataURL("image/png");
@@ -90,6 +95,22 @@ export default function CameraPosePredictor() {
               confidence: highest.value,
               snapshot,
             });
+
+            const lastEmailTime = emailSentRef.current[highest.label] || 0;
+            const EMAIL_COOLDOWN = 5000;
+
+            if (now - lastEmailTime > EMAIL_COOLDOWN) {
+              emailSentRef.current[highest.label] = now;
+
+              const PAYLOAD = {
+                pose: highest.label,
+                confidence: (highest.value * 100).toFixed(1),
+              }
+
+              emailjs.send(SERVICE_ID, TEMPLATE_ID, PAYLOAD, PUBLIC_KEY)
+                .then(() => console.log(`Alert email sent for ${highest.label}`))
+                .catch((err) => console.error("Email send failed:", err));
+            }
           }
         }
       });

@@ -11,6 +11,7 @@ import NotificationModal from "../../components/NotificationModal";
 import DeleteConfirmation from "../../components/DeleteConfirmation";
 
 import styles from "./Dashboard.module.css";
+// import alertSound from '../../assets/alert-sound-effect.mp3';
 
 const socket = io("http://localhost:5000");
 
@@ -27,7 +28,7 @@ const capitalize = (str) => {
 };
 
 
-export default function DashboardPage() {
+export default function Dashboard() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalEvent, setModalEvent] = useState(null);
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [notificationImage, setNotificationImage] = useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(null);
 
+  const audioRef = useRef(null);
   const lastAlertedTimestamp = useRef(null);
 
   const fetchData = async () => {
@@ -65,6 +67,15 @@ export default function DashboardPage() {
     }
   };
 
+  const playAudio = () => {
+    if (audioRef.current) {
+      // audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((err) => {
+        console.warn("Audio play failed", err);
+      });
+    }
+  };
 
   const handleSaveStatus = async (newStatus) => {
     if (!modalEvent) return;
@@ -139,6 +150,32 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    audioRef.current = new Audio('/assets/alert-sound-effect.mp3');
+    audioRef.current.load();
+
+    const handleUserInteraction = async () => {
+      try {
+        audioRef.current.muted = true;
+        await audioRef.current.play();
+        console.log("🔊 Audio unlocked after user interaction");
+        audioRef.current.pause();
+        audioRef.current.muted = false;
+        audioRef.current.currentTime = 0;
+        window.removeEventListener("click", handleUserInteraction);
+      } catch (err) {
+        console.warn("Audio unlock failed", err);
+      }
+    };
+
+    window.addEventListener("click", handleUserInteraction);
+
+    return () => {
+      window.removeEventListener("click", handleUserInteraction);
+    };
+  }, []);
+
+
+  useEffect(() => {
     socket.on("connect", () => {
       console.log("Socket connected:", socket.id);
       socket.emit("join", "dashboard");
@@ -153,6 +190,7 @@ export default function DashboardPage() {
         setNotificationMsg(`Pose detected: ${data.pose} (Confidence: ${(data.confidence * 100).toFixed(1)}%)`);
         setNotificationImage(`http://localhost:5000/imgs/${data["image-path"]}`);
 
+        playAudio();
         setShowNotification(true);
         fetchData();
       }

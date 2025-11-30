@@ -1,9 +1,9 @@
 [
   {
-    "timestamp": "2025-11-29 08:08:04",
+    "timestamp": "2025-12-01 04:33:35",
     "pose": "Right Punch",
-    "confidence": 86,
-    "status": "suspicious",
-    "image-path": "Right Punch_85_1764374884.png"
+    "confidence": 85,
+    "status": "unreviewed",
+    "image-path": "Right Punch_84_1764534815.png"
   }
 ]
