@@ -31,3 +31,8 @@ Open two terminals:
 A simple interface for pose‑based detection / annotation.  
 Frontend serves the UI, backend handles the API and data / database.
 
+
+## Note
+**Reminder:** In `api.py` on line 28, update the variable  
+`RSTP_ADDRESS=""`  
+to correct the RSTP address provided in the user manual.
