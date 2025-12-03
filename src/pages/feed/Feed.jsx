@@ -10,8 +10,8 @@ export default function Feed() {
     <div className={styles.pageContainer}>
       <NavBar />
       <div className={styles.content}>
-        {/* <CameraPosePredictor /> */}
-        <CameraPosePredictor2 />
+        <CameraPosePredictor />
+        {/* <CameraPosePredictor2 /> */}
       </div>
     </div>
   );
