@@ -1,5 +1,6 @@
 import cv2
 import openpyxl
+import threading
 import numpy as np
 import os, json, time, bcrypt, base64, datetime
 from io import BytesIO
@@ -26,7 +27,11 @@ HIGH_CONFIDENCE_THRESHOLD = 0.8
 last_saved_time = {}
 SNAPSHOT_COOLDOWN = 5
 
-RSTP_ADDRESS = ""
+RTSP_ADDRESS = ""
+
+cap = cv2.VideoCapture(RTSP_ADDRESS)
+frame_lock = threading.Lock()
+latest_frame = None
 
 def load_credentials():
     cred_path = os.path.join(CRED_DIR, 'user_details.json')
@@ -101,26 +106,6 @@ def log_suspicious_pose(pose, conf, snapshot_filename=None):
     save_db(os.path.join(DB_DIR, 'suspicious_poses.json'), suspicious_poses)
 
 
-def generate_frames():
-    cap = cv2.VideoCapture(RSTP_ADDRESS)
-
-    if not cap.isOpened():
-        print("Error: Cannot open RTSP stream")
-        return
-
-    while True:
-        success, frame = cap.read()
-        if not success:
-            continue
-
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame = buffer.tobytes()
-
-        yield (
-            b'--frame\r\n'
-            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n'
-        )
-
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -133,21 +118,37 @@ def serve_image(filename):
     return send_from_directory(IMG_DIR, filename)
 
 
+def capture_frames():
+    global latest_frame, cap
+    while True:
+        if not cap.isOpened():
+            cap = cv2.VideoCapture(RTSP_ADDRESS)
+            time.sleep(1)
+            continue
+
+        ret, frame = cap.read()
+        if not ret:
+            time.sleep(0.1)
+            continue
+
+        _, buffer = cv2.imencode('.jpg', frame)
+        with frame_lock:
+            latest_frame = buffer.tobytes()
+
+threading.Thread(target=capture_frames, daemon=True).start()
+
 @app.route("/api/ipcam_stream")
 def ipcam_stream():
-    cap = cv2.VideoCapture("rtsp://YOUR_CAMERA_URL")
-
     def gen():
         while True:
-            ret, frame = cap.read()
-            if not ret:
-                continue
-            _, jpeg = cv2.imencode(".jpg", frame)
-            yield (b"--frame\r\n"
-                   b"Content-Type: image/jpeg\r\n\r\n" +
-                   jpeg.tobytes() +
-                   b"\r\n")
-
+            with frame_lock:
+                if latest_frame is None:
+                    continue
+                frame = latest_frame
+            yield (
+                b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n'
+            )
     return Response(gen(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 @app.route('/api/login', methods=['POST'])
