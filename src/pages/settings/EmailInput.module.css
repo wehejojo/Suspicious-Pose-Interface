@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+.email-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, #ffffff, #f0f4ff);
+  position: relative;
+}
+
+.email-box {
+  background-color: #ffffff;
+  padding: 40px 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(4px);
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  z-index: 1;
+}
+
+.email-title {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #0d47a1;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.email-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.email-form label {
+  margin-bottom: 8px;
+  color: #333333;
+  font-size: 14px;
+}
+
+.email-form input {
+  padding: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #cccccc;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border 0.3s;
+}
+
+.email-form input:focus {
+  border-color: #0d47a1;
+  outline: none;
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
+}
+
+.save-btn {
+  padding: 12px;
+  background-color: #0d47a1;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 48%;
+  transition: background 0.3s;
+}
+
+.save-btn:hover {
+  background-color: #1565c0;
+}
+
+.cancel-btn {
+  padding: 12px;
+  background-color: #cccccc;
+  color: #333333;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 48%;
+  transition: background 0.3s;
+}
+
+.cancel-btn:hover {
+  background-color: #b3b3b3;
+}

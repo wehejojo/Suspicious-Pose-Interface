@@ -4,6 +4,7 @@ import * as tf from "@tensorflow/tfjs";
 import "@tensorflow/tfjs-backend-webgl";
 import emailjs from "@emailjs/browser";
 import { io } from "socket.io-client";
+import axios from "axios";
 import styles from "./CameraPosePredictor.module.css";
 
 export default function CameraPosePredictor() {
@@ -11,7 +12,11 @@ export default function CameraPosePredictor() {
   const canvasRef = useRef(null);
   const snapshotCanvasRef = useRef(null);
   const emailSentRef = useRef({});
-  const [pose, setPose] = useState("neutral");
+  const [pose, setPose] = useState("Neutral");
+
+  const [toEmail, setToEmail] = useState("");
+  const [cc, setCc] = useState("");
+  const [bcc, setBcc] = useState("");
 
   const lastSnapshotTime = {};
   const SNAPSHOT_COOLDOWN = 5000;
@@ -19,6 +24,23 @@ export default function CameraPosePredictor() {
   const SERVICE_ID = "service_yv310xd";
   const TEMPLATE_ID = "template_dpg783k";
   const PUBLIC_KEY = "CLvTgPmSeNo37nrfI";
+
+  useEffect(() => {
+    const fetchEmails = async () => {
+      try {
+        const response = await axios.get("/api/email");
+        if (response.data.length > 0) {
+          const { to_email, cc, bcc } = response.data[0];
+          setToEmail(to_email || "");
+          setCc(cc || "");
+          setBcc(bcc || "");
+        }
+      } catch (err) {
+        console.error("Failed to load email settings", err);
+      }
+    };
+    fetchEmails();
+  }, []);
 
   useEffect(() => {
     const socket = io("http://localhost:5000");
@@ -70,7 +92,7 @@ export default function CameraPosePredictor() {
             { label: "Left Kick", value: data.confidences.left_kick },
             { label: "Right Kick", value: data.confidences.right_kick },
             { label: "Lying Down", value: data.confidences.lying },
-            { label: "Holding Firearm", value: data.confidences.firearm }, 
+            { label: "Holding Firearm", value: data.confidences.firearm },
           ];
 
           const highest = entries.reduce((max, entry) =>
@@ -105,7 +127,11 @@ export default function CameraPosePredictor() {
               const PAYLOAD = {
                 pose: highest.label,
                 confidence: (highest.value * 100).toFixed(1),
-              }
+                from_name: "CCTV System",
+                to_email: toEmail,
+                cc: cc,
+                bcc: bcc
+              };
 
               emailjs.send(SERVICE_ID, TEMPLATE_ID, PAYLOAD, PUBLIC_KEY)
                 .then(() => console.log(`Alert email sent for ${highest.label}`))
@@ -146,7 +172,7 @@ export default function CameraPosePredictor() {
       if (detector) detector.dispose?.();
       socket.disconnect();
     };
-  }, []);
+  }, [toEmail, cc, bcc]); // <-- dependency array includes emails to keep payload updated
 
   return (
     <div className={styles.container}>
@@ -166,18 +192,9 @@ export default function CameraPosePredictor() {
 
 function drawSkeleton(ctx, keypoints) {
   const adjacentPairs = [
-    [5, 7],
-    [7, 9],
-    [6, 8],
-    [8, 10],
-    [5, 6],
-    [5, 11],
-    [6, 12],
-    [11, 12],
-    [11, 13],
-    [13, 15],
-    [12, 14],
-    [14, 16],
+    [5, 7], [7, 9], [6, 8], [8, 10],
+    [5, 6], [5, 11], [6, 12], [11, 12],
+    [11, 13], [13, 15], [12, 14], [14, 16],
   ];
 
   ctx.strokeStyle = "lime";

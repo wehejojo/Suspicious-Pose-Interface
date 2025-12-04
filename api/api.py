@@ -14,6 +14,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 DB_DIR = os.path.join(os.path.dirname(__file__), '..', 'db', 'logs')
 CRED_DIR = os.path.join(os.path.dirname(__file__), '..', 'db', 'credentials')
+EMAILS_DIR = os.path.join(os.path.dirname(__file__), '..', 'db', 'credentials')
 IMG_DIR = os.path.join(os.path.dirname(__file__), '..', 'db', 'imgs')
 
 os.makedirs(DB_DIR, exist_ok=True)
@@ -189,6 +190,37 @@ def change_password():
     save_credentials(creds)
 
     return jsonify({"success": True}), 200
+
+
+@app.route('/api/email', methods=['GET', 'POST'])
+def email():
+    email_path = os.path.join(EMAILS_DIR, 'emails.json')
+    emails = load_db(email_path, default=[{"to_email": "", "cc": "", "bcc": ""}])
+
+    if request.method == 'GET':
+        return jsonify(emails), 200
+
+    if request.method == 'POST':
+        body = request.get_json()
+        required = ["to_email", "cc", "bcc"]
+        if not all(param in body for param in required):
+            return jsonify({"error": "Missing required fields."}), 400
+
+        if emails:
+            emails[0] = {
+                "to_email": body["to_email"],
+                "cc": body["cc"],
+                "bcc": body["bcc"]
+            }
+        else:
+            emails.append({
+                "to_email": body["to_email"],
+                "cc": body["cc"],
+                "bcc": body["bcc"]
+            })
+
+        save_db(email_path, emails)
+        return jsonify({"message": "Email entry updated successfully"}), 200
 
 
 @app.route('/api/latest', methods=['GET'])
