@@ -57,7 +57,7 @@ export default function CameraPosePredictor2() {
       const canvas = canvasRef.current;
       if (!img || !canvas) return;
 
-      const ctx = canvas.getContext("2d");
+      // const ctx = canvas.getContext("2d");
 
       snapshotCanvasRef.current = document.createElement("canvas");
       const snapCanvas = snapshotCanvasRef.current;
@@ -68,7 +68,10 @@ export default function CameraPosePredictor2() {
 
       detector = await posedetection.createDetector(
         posedetection.SupportedModels.MoveNet,
-        { modelType: "SinglePose.Lightning" }
+        {
+          modelType: posedetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+          modelUrl: "/models/movenet_singlepose_lightning/model.json"
+        }
       );
 
       img.onload = () => {
@@ -104,7 +107,7 @@ export default function CameraPosePredictor2() {
             lastSnapshotTime[highest.label] = now;
 
             snapCtx.clearRect(0, 0, snapCanvas.width, snapCanvas.height);
-            snapCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
+            snapCtx.drawImage(img, 0, 0, snapCanvas.width, snapCanvas.height);
             const snapshot = snapCanvas.toDataURL("image/png");
 
             socket.emit("high_confidence_pose", {
@@ -136,7 +139,7 @@ export default function CameraPosePredictor2() {
           }
         }
       });
-    } 
+    }
 
     async function loop() {
       const now = performance.now();
